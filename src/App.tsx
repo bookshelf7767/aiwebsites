@@ -1,4 +1,16 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
+import dogAdultImage from './assets/pets/dog-adult.svg'
+import dogBabyImage from './assets/pets/dog-baby.svg'
+import dogMysticalImage from './assets/pets/dog-mystical.svg'
+import hyenaAdultImage from './assets/pets/hyena-adult.svg'
+import hyenaBabyImage from './assets/pets/hyena-baby.svg'
+import hyenaMysticalImage from './assets/pets/hyena-mystical.svg'
+import jaguarAdultImage from './assets/pets/jaguar-adult.svg'
+import jaguarBabyImage from './assets/pets/jaguar-baby.svg'
+import jaguarMysticalImage from './assets/pets/jaguar-mystical.svg'
+import lionAdultImage from './assets/pets/lion-adult.svg'
+import lionBabyImage from './assets/pets/lion-baby.svg'
+import lionMysticalImage from './assets/pets/lion-mystical.svg'
 
 type PetKind = 'lion' | 'jaguar' | 'dog' | 'hyena'
 
@@ -14,7 +26,7 @@ type Activity = {
 
 type PetForm = {
   name: 'Baby' | 'Adult' | 'Mystical'
-  visual: string
+  image: string
   subtitle: string
   aura: string
 }
@@ -30,7 +42,7 @@ type PetDefinition = {
 
 type SavedState = {
   selectedPet: PetKind
-  xp: number
+  xpByPet: Record<PetKind, number>
   activities: Activity[]
 }
 
@@ -42,9 +54,9 @@ const PETS: PetDefinition[] = [
     accent: 'from-amber-200 to-yellow-100',
     description: 'Bold, confident, and ready to turn a finished schedule into a victory roar.',
     forms: [
-      { name: 'Baby', visual: '🦁', subtitle: 'Lion Cub', aura: 'bg-amber-50' },
-      { name: 'Adult', visual: '🦁👑', subtitle: 'Pride King', aura: 'bg-amber-100' },
-      { name: 'Mystical', visual: '✨🦁👑✨', subtitle: 'Solar Guardian', aura: 'bg-yellow-100' },
+      { name: 'Baby', image: lionBabyImage, subtitle: 'Lion Cub', aura: 'bg-amber-50' },
+      { name: 'Adult', image: lionAdultImage, subtitle: 'Pride King', aura: 'bg-amber-100' },
+      { name: 'Mystical', image: lionMysticalImage, subtitle: 'Solar Guardian', aura: 'bg-yellow-100' },
     ],
   },
   {
@@ -54,9 +66,9 @@ const PETS: PetDefinition[] = [
     accent: 'from-orange-200 to-amber-100',
     description: 'Fast, focused, and happiest when your task list disappears one item at a time.',
     forms: [
-      { name: 'Baby', visual: '🐆', subtitle: 'Jaguar Cub', aura: 'bg-orange-50' },
-      { name: 'Adult', visual: '🐆⚡', subtitle: 'Jungle Hunter', aura: 'bg-orange-100' },
-      { name: 'Mystical', visual: '🌙🐆⚡', subtitle: 'Shadow Prowler', aura: 'bg-violet-100' },
+      { name: 'Baby', image: jaguarBabyImage, subtitle: 'Jaguar Cub', aura: 'bg-orange-50' },
+      { name: 'Adult', image: jaguarAdultImage, subtitle: 'Jungle Hunter', aura: 'bg-orange-100' },
+      { name: 'Mystical', image: jaguarMysticalImage, subtitle: 'Shadow Prowler', aura: 'bg-violet-100' },
     ],
   },
   {
@@ -66,9 +78,9 @@ const PETS: PetDefinition[] = [
     accent: 'from-amber-200 to-orange-100',
     description: 'Loyal, energetic, and convinced every completed task deserves a celebration.',
     forms: [
-      { name: 'Baby', visual: '🐶', subtitle: 'Puppy', aura: 'bg-amber-50' },
-      { name: 'Adult', visual: '🐕🛡️', subtitle: 'Guardian Dog', aura: 'bg-sky-100' },
-      { name: 'Mystical', visual: '⚡🐺🛡️', subtitle: 'Storm Hound', aura: 'bg-indigo-100' },
+      { name: 'Baby', image: dogBabyImage, subtitle: 'Puppy', aura: 'bg-amber-50' },
+      { name: 'Adult', image: dogAdultImage, subtitle: 'Guardian Dog', aura: 'bg-sky-100' },
+      { name: 'Mystical', image: dogMysticalImage, subtitle: 'Storm Hound', aura: 'bg-indigo-100' },
     ],
   },
   {
@@ -78,9 +90,9 @@ const PETS: PetDefinition[] = [
     accent: 'from-violet-200 to-indigo-100',
     description: 'Clever, persistent, and always ready to laugh at a schedule that thought it could win.',
     forms: [
-      { name: 'Baby', visual: '🐺', subtitle: 'Hyena Pup', aura: 'bg-stone-100' },
-      { name: 'Adult', visual: '🐺🔥', subtitle: 'Savanna Rogue', aura: 'bg-orange-100' },
-      { name: 'Mystical', visual: '🌌🐺🔥', subtitle: 'Chaos Spirit', aura: 'bg-fuchsia-100' },
+      { name: 'Baby', image: hyenaBabyImage, subtitle: 'Hyena Pup', aura: 'bg-stone-100' },
+      { name: 'Adult', image: hyenaAdultImage, subtitle: 'Savanna Rogue', aura: 'bg-orange-100' },
+      { name: 'Mystical', image: hyenaMysticalImage, subtitle: 'Chaos Spirit', aura: 'bg-fuchsia-100' },
     ],
   },
 ]
@@ -112,32 +124,54 @@ function getProgressPercent(xp: number) {
   return Math.min(100, ((xp - currentStageFloor) / stageProgress) * 100)
 }
 
+function createEmptyPetXp(): Record<PetKind, number> {
+  return {
+    lion: 0,
+    jaguar: 0,
+    dog: 0,
+    hyena: 0,
+  }
+}
+
 function loadState(): SavedState {
   const raw = localStorage.getItem(STORAGE_KEY)
 
   if (!raw) {
     return {
       selectedPet: 'lion',
-      xp: 0,
+      xpByPet: createEmptyPetXp(),
       activities: [],
     }
   }
 
   try {
-    const parsed = JSON.parse(raw) as Partial<SavedState>
+    const parsed = JSON.parse(raw) as Partial<SavedState> & { xp?: unknown }
     const selectedPet = VALID_PETS.includes(parsed.selectedPet as PetKind)
       ? (parsed.selectedPet as PetKind)
       : 'lion'
+    const xpByPet = createEmptyPetXp()
+
+    if (parsed.xpByPet && typeof parsed.xpByPet === 'object') {
+      for (const petKind of VALID_PETS) {
+        const petXp = parsed.xpByPet[petKind]
+        if (typeof petXp === 'number' && Number.isFinite(petXp) && petXp >= 0) {
+          xpByPet[petKind] = petXp
+        }
+      }
+    } else if (typeof parsed.xp === 'number' && Number.isFinite(parsed.xp) && parsed.xp >= 0) {
+      // Migrate the previous shared XP balance to the pet that owned it.
+      xpByPet[selectedPet] = parsed.xp
+    }
 
     return {
       selectedPet,
-      xp: typeof parsed.xp === 'number' ? parsed.xp : 0,
+      xpByPet,
       activities: Array.isArray(parsed.activities) ? parsed.activities : [],
     }
   } catch {
     return {
       selectedPet: 'lion',
-      xp: 0,
+      xpByPet: createEmptyPetXp(),
       activities: [],
     }
   }
@@ -160,7 +194,7 @@ function AppHeader({ xp }: AppHeaderProps) {
         </p>
       </div>
       <div className="rounded-2xl bg-stone-900 px-5 py-3 text-center text-white">
-        <div className="text-xs font-bold uppercase tracking-[0.2em] text-stone-300">Total XP</div>
+        <div className="text-xs font-bold uppercase tracking-[0.2em] text-stone-300">Selected pet XP</div>
         <div className="text-3xl font-black">{xp}</div>
       </div>
     </header>
@@ -366,12 +400,10 @@ function CompanionCard({ pet, xp, stage, form, nextEvolutionXp, progressPercent 
       <div className="rounded-[1.5rem] bg-white/75 p-6 text-center backdrop-blur">
         <p className="text-sm font-black uppercase tracking-[0.2em] text-stone-500">Your companion</p>
         <div
-          className={`pet-float mx-auto my-6 flex h-48 w-48 items-center justify-center rounded-full border-8 border-white/80 ${form.aura} text-center shadow-xl ${stage === 3 ? 'mystical-glow scale-110' : stage === 2 ? 'scale-105' : ''
+          className={`pet-float mx-auto my-6 h-48 w-48 overflow-hidden rounded-[2rem] border-4 border-white/80 ${form.aura} shadow-xl ${stage === 3 ? 'mystical-glow scale-110' : stage === 2 ? 'scale-105' : ''
             }`}
         >
-          <span className={`${stage === 1 ? 'text-8xl' : stage === 2 ? 'text-6xl' : 'text-5xl'} leading-none`}>
-            {form.visual}
-          </span>
+          <img src={form.image} alt={`${form.name} form of ${pet.name}`} className="h-full w-full object-cover" />
         </div>
         <h2 className="text-3xl font-black text-stone-900">{pet.name}</h2>
         <p className="mt-1 font-black text-violet-700">
@@ -397,10 +429,11 @@ function CompanionCard({ pet, xp, stage, form, nextEvolutionXp, progressPercent 
 
 type PetSelectorProps = {
   selectedPet: PetKind
+  xpByPet: Record<PetKind, number>
   onSelectPet: (petKind: PetKind) => void
 }
 
-function PetSelector({ selectedPet, onSelectPet }: PetSelectorProps) {
+function PetSelector({ selectedPet, xpByPet, onSelectPet }: PetSelectorProps) {
   return (
     <div className="rounded-[2rem] border border-white/80 bg-white/80 p-6 shadow-lg shadow-stone-200/40 backdrop-blur">
       <p className="text-sm font-bold uppercase tracking-[0.2em] text-fuchsia-600">Pet selector</p>
@@ -418,6 +451,9 @@ function PetSelector({ selectedPet, onSelectPet }: PetSelectorProps) {
           >
             <div className="text-4xl">{candidate.selectorEmoji}</div>
             <div className="mt-2 text-sm font-black text-stone-900">{candidate.name}</div>
+              <div className="mt-1 text-xs font-bold text-stone-500">
+                {xpByPet[candidate.kind]} XP · Stage {getEvolutionStage(xpByPet[candidate.kind])}
+              </div>
           </button>
         ))}
       </div>
@@ -432,8 +468,9 @@ function RulesPanel() {
       <ul className="mt-4 space-y-3 text-sm leading-6 text-stone-300">
         <li>• Complete an activity before its XP can be fed.</li>
         <li>• Every hour is worth 10 XP. A 2.5-hour activity earns 25 XP.</li>
-        <li>• Your pet evolves from Baby → Adult at 100 XP, then Adult → Mystical at 200 XP.</li>
-        <li>• Your schedule, pet, and XP are saved in browser local storage.</li>
+        <li>• Each pet has its own XP and evolves from Baby → Adult at 100 XP, then Adult → Mystical at 200 XP.</li>
+        <li>• Feeding XP adds it only to the selected pet. Each completed activity can be fed once.</li>
+        <li>• Your schedule, selected pet, and each pet’s XP are saved in browser local storage.</li>
       </ul>
     </div>
   )
@@ -442,7 +479,7 @@ function RulesPanel() {
 export default function App() {
   const initialState = useMemo(loadState, [])
   const [selectedPet, setSelectedPet] = useState<PetKind>(initialState.selectedPet)
-  const [xp, setXp] = useState(initialState.xp)
+  const [xpByPet, setXpByPet] = useState(initialState.xpByPet)
   const [activities, setActivities] = useState<Activity[]>(initialState.activities)
 
   const [title, setTitle] = useState('')
@@ -451,11 +488,12 @@ export default function App() {
   const [hours, setHours] = useState(1)
 
   useEffect(() => {
-    const state: SavedState = { selectedPet, xp, activities }
+    const state: SavedState = { selectedPet, xpByPet, activities }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  }, [selectedPet, xp, activities])
+  }, [selectedPet, xpByPet, activities])
 
   const pet = PETS.find((candidate) => candidate.kind === selectedPet) ?? PETS[0]
+  const xp = xpByPet[selectedPet]
   const stage = getEvolutionStage(xp)
   const nextEvolutionXp = getNextEvolutionXp(xp)
   const form = pet.forms[stage - 1]
@@ -501,7 +539,10 @@ export default function App() {
     if (!activity.completed || activity.xpClaimed) return
 
     const earnedXp = Math.round(activity.hours * XP_PER_HOUR)
-    setXp((current) => current + earnedXp)
+    setXpByPet((current) => ({
+      ...current,
+      [selectedPet]: current[selectedPet] + earnedXp,
+    }))
     setActivities((current) =>
       current.map((item) => (item.id === activity.id ? { ...item, xpClaimed: true } : item)),
     )
@@ -548,7 +589,11 @@ export default function App() {
               progressPercent={progressPercent}
             />
 
-            <PetSelector selectedPet={selectedPet} onSelectPet={setSelectedPet} />
+            <PetSelector
+              selectedPet={selectedPet}
+              xpByPet={xpByPet}
+              onSelectPet={setSelectedPet}
+            />
             <RulesPanel />
           </aside>
         </div>
