@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
+import PetIllustration from './PetIllustration'
 
 type PetKind = 'lion' | 'jaguar' | 'dog' | 'hyena'
 
@@ -369,9 +370,12 @@ function CompanionCard({ pet, xp, stage, form, nextEvolutionXp, progressPercent 
           className={`pet-float mx-auto my-6 flex h-48 w-48 items-center justify-center rounded-full border-8 border-white/80 ${form.aura} text-center shadow-xl ${stage === 3 ? 'mystical-glow scale-110' : stage === 2 ? 'scale-105' : ''
             }`}
         >
-          <span className={`${stage === 1 ? 'text-8xl' : stage === 2 ? 'text-6xl' : 'text-5xl'} leading-none`}>
-            {form.visual}
-          </span>
+          <PetIllustration
+            className="h-full w-full p-1 drop-shadow-lg"
+            kind={pet.kind}
+            label={`${form.name} ${form.subtitle}`}
+            stage={stage}
+          />
         </div>
         <h2 className="text-3xl font-black text-stone-900">{pet.name}</h2>
         <p className="mt-1 font-black text-violet-700">
@@ -416,7 +420,12 @@ function PetSelector({ selectedPet, onSelectPet }: PetSelectorProps) {
               : 'border-stone-200 bg-white hover:border-violet-300'
               }`}
           >
-            <div className="text-4xl">{candidate.selectorEmoji}</div>
+            <PetIllustration
+              className="h-16 w-16"
+              kind={candidate.kind}
+              label={`${candidate.name} baby`}
+              stage={1}
+            />
             <div className="mt-2 text-sm font-black text-stone-900">{candidate.name}</div>
           </button>
         ))}
