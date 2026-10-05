@@ -32,16 +32,3 @@ select {
 .pet-float {
   animation: floaty 3.2s ease-in-out infinite;
 }
-
-@keyframes mysticalPulse {
-  0%, 100% {
-    box-shadow: 0 0 24px rgba(139, 92, 246, 0.25), 0 0 50px rgba(245, 158, 11, 0.18);
-  }
-  50% {
-    box-shadow: 0 0 42px rgba(139, 92, 246, 0.48), 0 0 74px rgba(245, 158, 11, 0.35);
-  }
-}
-
-.mystical-glow {
-  animation: floaty 3.2s ease-in-out infinite, mysticalPulse 2.2s ease-in-out infinite;
-}

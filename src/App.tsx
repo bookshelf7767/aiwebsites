@@ -15,7 +15,6 @@ type Activity = {
 
 type PetForm = {
   name: 'Baby' | 'Adult' | 'Mystical'
-  visual: string
   subtitle: string
   aura: string
 }
@@ -23,7 +22,6 @@ type PetForm = {
 type PetDefinition = {
   kind: PetKind
   name: string
-  selectorEmoji: string
   accent: string
   description: string
   forms: [PetForm, PetForm, PetForm]
@@ -31,57 +29,61 @@ type PetDefinition = {
 
 type SavedState = {
   selectedPet: PetKind
-  xp: number
+  petXp: Record<PetKind, number>
   activities: Activity[]
+}
+
+type LegacySavedState = Partial<SavedState> & {
+  xp?: number
+}
+
+function emptyPetXp(): Record<PetKind, number> {
+  return { lion: 0, jaguar: 0, dog: 0, hyena: 0 }
 }
 
 const PETS: PetDefinition[] = [
   {
     kind: 'lion',
     name: 'Lai the Lion',
-    selectorEmoji: '🦁',
     accent: 'from-amber-200 to-yellow-100',
     description: 'Bold, confident, and ready to turn a finished schedule into a victory roar.',
     forms: [
-      { name: 'Baby', visual: '🦁', subtitle: 'Lion Cub', aura: 'bg-amber-50' },
-      { name: 'Adult', visual: '🦁👑', subtitle: 'Pride King', aura: 'bg-amber-100' },
-      { name: 'Mystical', visual: '✨🦁👑✨', subtitle: 'Solar Guardian', aura: 'bg-yellow-100' },
+      { name: 'Baby', subtitle: 'Lion Cub', aura: 'bg-amber-50' },
+      { name: 'Adult', subtitle: 'Pride King', aura: 'bg-amber-100' },
+      { name: 'Mystical', subtitle: 'Solar Guardian', aura: 'bg-yellow-100' },
     ],
   },
   {
     kind: 'jaguar',
     name: 'Junik the Jaguar',
-    selectorEmoji: '🐆',
     accent: 'from-orange-200 to-amber-100',
     description: 'Fast, focused, and happiest when your task list disappears one item at a time.',
     forms: [
-      { name: 'Baby', visual: '🐆', subtitle: 'Jaguar Cub', aura: 'bg-orange-50' },
-      { name: 'Adult', visual: '🐆⚡', subtitle: 'Jungle Hunter', aura: 'bg-orange-100' },
-      { name: 'Mystical', visual: '🌙🐆⚡', subtitle: 'Shadow Prowler', aura: 'bg-violet-100' },
+      { name: 'Baby', subtitle: 'Jaguar Cub', aura: 'bg-orange-50' },
+      { name: 'Adult', subtitle: 'Jungle Hunter', aura: 'bg-orange-100' },
+      { name: 'Mystical', subtitle: 'Shadow Prowler', aura: 'bg-violet-100' },
     ],
   },
   {
     kind: 'dog',
     name: 'Daniel the Dog',
-    selectorEmoji: '🐶',
     accent: 'from-amber-200 to-orange-100',
     description: 'Loyal, energetic, and convinced every completed task deserves a celebration.',
     forms: [
-      { name: 'Baby', visual: '🐶', subtitle: 'Puppy', aura: 'bg-amber-50' },
-      { name: 'Adult', visual: '🐕🛡️', subtitle: 'Guardian Dog', aura: 'bg-sky-100' },
-      { name: 'Mystical', visual: '⚡🐺🛡️', subtitle: 'Storm Hound', aura: 'bg-indigo-100' },
+      { name: 'Baby', subtitle: 'Puppy', aura: 'bg-amber-50' },
+      { name: 'Adult', subtitle: 'Guardian Dog', aura: 'bg-sky-100' },
+      { name: 'Mystical', subtitle: 'Storm Hound', aura: 'bg-indigo-100' },
     ],
   },
   {
     kind: 'hyena',
     name: 'Hyun the Hyena',
-    selectorEmoji: '🐺',
     accent: 'from-violet-200 to-indigo-100',
     description: 'Clever, persistent, and always ready to laugh at a schedule that thought it could win.',
     forms: [
-      { name: 'Baby', visual: '🐺', subtitle: 'Hyena Pup', aura: 'bg-stone-100' },
-      { name: 'Adult', visual: '🐺🔥', subtitle: 'Savanna Rogue', aura: 'bg-orange-100' },
-      { name: 'Mystical', visual: '🌌🐺🔥', subtitle: 'Chaos Spirit', aura: 'bg-fuchsia-100' },
+      { name: 'Baby', subtitle: 'Hyena Pup', aura: 'bg-stone-100' },
+      { name: 'Adult', subtitle: 'Savanna Rogue', aura: 'bg-orange-100' },
+      { name: 'Mystical', subtitle: 'Chaos Spirit', aura: 'bg-fuchsia-100' },
     ],
   },
 ]
@@ -119,26 +121,38 @@ function loadState(): SavedState {
   if (!raw) {
     return {
       selectedPet: 'lion',
-      xp: 0,
+      petXp: emptyPetXp(),
       activities: [],
     }
   }
 
   try {
-    const parsed = JSON.parse(raw) as Partial<SavedState>
+    const parsed = JSON.parse(raw) as LegacySavedState
     const selectedPet = VALID_PETS.includes(parsed.selectedPet as PetKind)
       ? (parsed.selectedPet as PetKind)
       : 'lion'
+    const petXp = emptyPetXp()
+
+    if (parsed.petXp && typeof parsed.petXp === 'object') {
+      for (const petKind of VALID_PETS) {
+        const value = parsed.petXp[petKind]
+        if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+          petXp[petKind] = value
+        }
+      }
+    } else if (typeof parsed.xp === 'number' && Number.isFinite(parsed.xp) && parsed.xp >= 0) {
+      petXp[selectedPet] = parsed.xp
+    }
 
     return {
       selectedPet,
-      xp: typeof parsed.xp === 'number' ? parsed.xp : 0,
+      petXp,
       activities: Array.isArray(parsed.activities) ? parsed.activities : [],
     }
   } catch {
     return {
       selectedPet: 'lion',
-      xp: 0,
+      petXp: emptyPetXp(),
       activities: [],
     }
   }
@@ -161,7 +175,7 @@ function AppHeader({ xp }: AppHeaderProps) {
         </p>
       </div>
       <div className="rounded-2xl bg-stone-900 px-5 py-3 text-center text-white">
-        <div className="text-xs font-bold uppercase tracking-[0.2em] text-stone-300">Total XP</div>
+        <div className="text-xs font-bold uppercase tracking-[0.2em] text-stone-300">Selected pet XP</div>
         <div className="text-3xl font-black">{xp}</div>
       </div>
     </header>
@@ -367,8 +381,7 @@ function CompanionCard({ pet, xp, stage, form, nextEvolutionXp, progressPercent 
       <div className="rounded-[1.5rem] bg-white/75 p-6 text-center backdrop-blur">
         <p className="text-sm font-black uppercase tracking-[0.2em] text-stone-500">Your companion</p>
         <div
-          className={`pet-float mx-auto my-6 flex h-48 w-48 items-center justify-center rounded-full border-8 border-white/80 ${form.aura} text-center shadow-xl ${stage === 3 ? 'mystical-glow scale-110' : stage === 2 ? 'scale-105' : ''
-            }`}
+          className={`pet-float mx-auto my-6 flex h-48 w-48 items-center justify-center rounded-full border-8 border-white/80 ${form.aura} text-center shadow-xl`}
         >
           <PetIllustration
             className="h-full w-full p-1 drop-shadow-lg"
@@ -442,7 +455,7 @@ function RulesPanel() {
         <li>• Complete an activity before its XP can be fed.</li>
         <li>• Every hour is worth 10 XP. A 2.5-hour activity earns 25 XP.</li>
         <li>• Your pet evolves from Baby → Adult at 100 XP, then Adult → Mystical at 200 XP.</li>
-        <li>• Your schedule, pet, and XP are saved in browser local storage.</li>
+        <li>• Each pet keeps its own XP, and your schedule is saved in browser local storage.</li>
       </ul>
     </div>
   )
@@ -451,7 +464,7 @@ function RulesPanel() {
 export default function App() {
   const initialState = useMemo(loadState, [])
   const [selectedPet, setSelectedPet] = useState<PetKind>(initialState.selectedPet)
-  const [xp, setXp] = useState(initialState.xp)
+  const [petXp, setPetXp] = useState(initialState.petXp)
   const [activities, setActivities] = useState<Activity[]>(initialState.activities)
 
   const [title, setTitle] = useState('')
@@ -460,11 +473,12 @@ export default function App() {
   const [hours, setHours] = useState(1)
 
   useEffect(() => {
-    const state: SavedState = { selectedPet, xp, activities }
+    const state: SavedState = { selectedPet, petXp, activities }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  }, [selectedPet, xp, activities])
+  }, [selectedPet, petXp, activities])
 
   const pet = PETS.find((candidate) => candidate.kind === selectedPet) ?? PETS[0]
+  const xp = petXp[selectedPet]
   const stage = getEvolutionStage(xp)
   const nextEvolutionXp = getNextEvolutionXp(xp)
   const form = pet.forms[stage - 1]
@@ -510,7 +524,10 @@ export default function App() {
     if (!activity.completed || activity.xpClaimed) return
 
     const earnedXp = Math.round(activity.hours * XP_PER_HOUR)
-    setXp((current) => current + earnedXp)
+    setPetXp((current) => ({
+      ...current,
+      [selectedPet]: current[selectedPet] + earnedXp,
+    }))
     setActivities((current) =>
       current.map((item) => (item.id === activity.id ? { ...item, xpClaimed: true } : item)),
     )
